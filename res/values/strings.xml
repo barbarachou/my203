@@ -1,0 +1,12 @@
+<resources>
+
+    <string name="app_name">my203</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="menu_settings">反馈</string>
+    <string name="title_activity_main_phone">203通讯录</string>
+    
+    <string name="update_title">刷新信息</string>
+    <string name="update_body">正在刷新。。。</string>
+    <string name="pop">若无号码或有新号码或信息错误请反馈，管理员看到会在第一时间更新的O(∩_∩)O</string>
+
+</resources>
