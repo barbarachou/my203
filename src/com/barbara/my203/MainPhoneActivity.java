@@ -14,21 +14,26 @@ import java.util.ArrayList;
 import org.apache.http.util.EncodingUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
-
 import com.umeng.analytics.MobclickAgent;
 import com.umeng.fb.NotificationType;
 import com.umeng.fb.UMFeedbackService;
 import com.umeng.update.UmengDownloadListener;
 import com.umeng.update.UmengUpdateAgent;
 
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -39,6 +44,7 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -49,9 +55,11 @@ public class MainPhoneActivity extends Activity {
 	private ListView listView;
 	private static ArrayList<Phone> nums = null;
 	private ProgressDialog progressDialog;
-	private static String file_url = "http://0.203class.duapp.com/phone.py?pw=0800220308";
+	private static String file_url = "http://barbarachou.duapp.com/android203/phone.py?pw=";
 	private String filePath = Environment.getExternalStorageDirectory()
 			.toString() + "/my203/phone.dat";
+	private String pw = "";
+	private SharedPreferences password;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -64,27 +72,7 @@ public class MainPhoneActivity extends Activity {
 		initView();
 		initData();
 		initViewData();
-
-		progressDialog = ProgressDialog.show(MainPhoneActivity.this,
-				getText(R.string.update_title), getText(R.string.update_body),
-				true, true);
-		new DownloadFileFromURL().execute(file_url);
-
-		listView = (ListView) findViewById(R.id.listView1);
-		nums = getHotel(filePath);
-		adapter = new PhoneAdapter(nums);
-		listView.setAdapter(adapter);
-		listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-
-			@Override
-			public void onItemClick(AdapterView<?> parents, View view,
-					int postion, long id) {
-				Phone pn = nums.get(postion);
-				Intent intent = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:"
-						+ pn.getNum()));
-				startActivity(intent);
-			}
-		});
+		setListener();
 
 		UMFeedbackService.enableNewReplyNotification(this,
 				NotificationType.AlertDialog);
@@ -106,16 +94,77 @@ public class MainPhoneActivity extends Activity {
 	}
 
 	private void initView() {
-
+		listView = (ListView) findViewById(R.id.listView1);
 	}
 
 	private void initData() {
-
+		File sdcardDir = Environment.getExternalStorageDirectory();
+		String path = sdcardDir.getPath() + "/my203";
+		File pathNew = new File(path);
+		if (!pathNew.exists()) {
+			pathNew.mkdirs();
+		}
+		password = getSharedPreferences("password", 0);
+//		new DownloadFileFromURL().execute(file_url);
 	}
 
 	private void initViewData() {
-
+		getPhoneNum("请输入密码(您的学号)");
+		nums = transList(filePath);
+		adapter = new PhoneAdapter(nums);
+		listView.setAdapter(adapter);
 	}
+	
+	private void setListener(){
+		listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+
+			@Override
+			public void onItemClick(AdapterView<?> parents, View view,
+					int postion, long id) {
+				Phone pn = nums.get(postion);
+				Intent intent = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:"
+						+ pn.getNum()));
+				startActivity(intent);
+			}
+		});
+	}
+	
+	private void getPhoneNum(String str) {
+		if(!isNetWork()){
+			Toast.makeText(this, "您的手机未开启网络", Toast.LENGTH_LONG).show();
+			return;
+		}
+		pw = password.getString("psw", "");
+		if (pw.equals("")) {
+			final EditText et = new EditText(this);
+			new AlertDialog.Builder(this)
+					.setTitle(str)
+					.setIcon(android.R.drawable.ic_dialog_info)
+					.setView(et)
+					.setPositiveButton("确定",
+							new DialogInterface.OnClickListener() {
+								@Override
+								public void onClick(DialogInterface arg0,
+										int arg1) {
+									pw = et.getText().toString();
+									new DownloadFileFromURL().execute(file_url
+											+ pw);
+								}
+							}).setNegativeButton("取消", null).show();
+		} else {
+			new DownloadFileFromURL().execute(file_url + pw);
+		}
+	}
+	
+	private boolean isNetWork(){
+    	ConnectivityManager cManager=(ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE); 
+    	NetworkInfo info = cManager.getActiveNetworkInfo(); 
+    	  if (info != null && info.isAvailable()){ 
+    	        return true; 
+    	  }else{ 
+    	        return false; 
+    	  } 
+    }
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -135,18 +184,9 @@ public class MainPhoneActivity extends Activity {
 		return true;
 	}
 
-//	@SuppressLint("SdCardPath")
-//	public boolean fileIsExists() {
-//		File f = new File("/sdcard/my203/phone.dat");
-//		if (!f.exists()) {
-//			return false;
-//		}
-//		return true;
+//	public void gotofb() {
+//		UMFeedbackService.openUmengFeedbackSDK(this);
 //	}
-
-	public void gotofb() {
-		UMFeedbackService.openUmengFeedbackSDK(this);
-	}
 
 	private String openFile(String fileName) {
 		FileInputStream fin;
@@ -161,16 +201,13 @@ public class MainPhoneActivity extends Activity {
 			res = EncodingUtils.getString(buffer, "UTF-8");
 			fin.close();
 		} catch (IOException e) {
-			Toast.makeText(this, "can't find the file", Toast.LENGTH_SHORT)
-					.show();
+			e.printStackTrace();
 		}
-
 		return res;
 	}
 
-	private ArrayList<Phone> getHotel(String fileName) {
+	private ArrayList<Phone> transList(String fileName) {
 		String res = openFile(fileName);
-		System.out.print("res ok");
 		ArrayList<Phone> list = new ArrayList<Phone>();
 		String name;
 		String num;
@@ -190,7 +227,7 @@ public class MainPhoneActivity extends Activity {
 			e.printStackTrace();
 		}
 		if (list.isEmpty()) {
-			list.add(new Phone("name", "phone", "city"));
+			list.add(new Phone("暂无联系人", "", ""));
 		}
 		return list;
 	}
@@ -275,6 +312,14 @@ public class MainPhoneActivity extends Activity {
 	}
 
 	class DownloadFileFromURL extends AsyncTask<String, String, String> {
+
+		@Override
+		protected void onPreExecute() {
+			progressDialog = ProgressDialog.show(MainPhoneActivity.this,
+					getText(R.string.update_title),
+					getText(R.string.update_body), true, true);
+		}
+
 		@Override
 		protected String doInBackground(String... f_url) {
 			int count;
@@ -286,14 +331,7 @@ public class MainPhoneActivity extends Activity {
 				InputStream input = new BufferedInputStream(url.openStream(),
 						8192);
 
-				File sdcardDir = Environment.getExternalStorageDirectory();
-				String path = sdcardDir.getPath() + "/my203";
-				File pathNew = new File(path);
-				if (!pathNew.exists()) {
-					pathNew.mkdirs();
-				}
-				OutputStream output = new FileOutputStream(
-						path+"/phone.dat");
+				OutputStream output = new FileOutputStream(filePath);
 
 				byte data[] = new byte[1024];
 
@@ -305,30 +343,29 @@ public class MainPhoneActivity extends Activity {
 				input.close();
 
 			} catch (Exception e) {
-				Log.e("Error: ", e.getMessage());
+				e.printStackTrace();
 			}
 
 			return null;
 		}
 
-		/**
-		 * After completing background task Dismiss the progress dialog
-		 * **/
 		@Override
 		protected void onPostExecute(String file_url) {
 			progressDialog.dismiss();
-			nums = getHotel(filePath);
-			adapter = new PhoneAdapter(nums);
-			listView.setAdapter(adapter);
+			if (openFile(filePath).equals("password error!")) {
+				getPhoneNum("密码错误(您的学号)");
+			} else {
+				SharedPreferences.Editor editor = password
+						.edit();
+				editor.putString("psw", pw);
+				editor.commit();
+				nums = transList(filePath);
+				adapter = new PhoneAdapter(nums);
+				listView.setAdapter(adapter);
+			}
 		}
 
 	}
-
-	// private void showProgressDialog() {
-	// progressDialog = ProgressDialog.show(MainPhoneActivity.this,
-	// getText(R.string.update_title), getText(R.string.update_body),
-	// true, true);
-	// }
 
 	@Override
 	public void onResume() {
