@@ -1,11 +1,13 @@
 package com.barbara.my203;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
@@ -14,6 +16,7 @@ import java.util.ArrayList;
 import org.apache.http.util.EncodingUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
+
 import com.umeng.analytics.MobclickAgent;
 import com.umeng.fb.NotificationType;
 import com.umeng.fb.UMFeedbackService;
@@ -56,8 +59,9 @@ public class MainPhoneActivity extends Activity {
 	private static ArrayList<Phone> nums = null;
 	private ProgressDialog progressDialog;
 	private static String file_url = "http://barbarachou.duapp.com/android203/phone.py?pw=";
-	private String filePath = Environment.getExternalStorageDirectory()
-			.toString() + "/my203/phone.dat";
+	// private String filePath = Environment.getExternalStorageDirectory()
+	// .toString() + "/my203/phone.dat";
+	private static String filePath = "phone";
 	private String pw = "";
 	private SharedPreferences password;
 
@@ -98,14 +102,14 @@ public class MainPhoneActivity extends Activity {
 	}
 
 	private void initData() {
-		File sdcardDir = Environment.getExternalStorageDirectory();
-		String path = sdcardDir.getPath() + "/my203";
-		File pathNew = new File(path);
-		if (!pathNew.exists()) {
-			pathNew.mkdirs();
-		}
+		// File sdcardDir = Environment.getExternalStorageDirectory();
+		// String path = sdcardDir.getPath() + "/my203";
+		// File pathNew = new File(path);
+		// if (!pathNew.exists()) {
+		// pathNew.mkdirs();
+		// }
 		password = getSharedPreferences("password", 0);
-//		new DownloadFileFromURL().execute(file_url);
+		// new DownloadFileFromURL().execute(file_url);
 	}
 
 	private void initViewData() {
@@ -114,8 +118,8 @@ public class MainPhoneActivity extends Activity {
 		adapter = new PhoneAdapter(nums);
 		listView.setAdapter(adapter);
 	}
-	
-	private void setListener(){
+
+	private void setListener() {
 		listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 
 			@Override
@@ -128,9 +132,9 @@ public class MainPhoneActivity extends Activity {
 			}
 		});
 	}
-	
+
 	private void getPhoneNum(String str) {
-		if(!isNetWork()){
+		if (!isNetWork()) {
 			Toast.makeText(this, "您的手机未开启网络", Toast.LENGTH_LONG).show();
 			return;
 		}
@@ -155,16 +159,16 @@ public class MainPhoneActivity extends Activity {
 			new DownloadFileFromURL().execute(file_url + pw);
 		}
 	}
-	
-	private boolean isNetWork(){
-    	ConnectivityManager cManager=(ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE); 
-    	NetworkInfo info = cManager.getActiveNetworkInfo(); 
-    	  if (info != null && info.isAvailable()){ 
-    	        return true; 
-    	  }else{ 
-    	        return false; 
-    	  } 
-    }
+
+	private boolean isNetWork() {
+		ConnectivityManager cManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+		NetworkInfo info = cManager.getActiveNetworkInfo();
+		if (info != null && info.isAvailable()) {
+			return true;
+		} else {
+			return false;
+		}
+	}
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -184,26 +188,42 @@ public class MainPhoneActivity extends Activity {
 		return true;
 	}
 
-//	public void gotofb() {
-//		UMFeedbackService.openUmengFeedbackSDK(this);
-//	}
+	// public void gotofb() {
+	// UMFeedbackService.openUmengFeedbackSDK(this);
+	// }
 
 	private String openFile(String fileName) {
-		FileInputStream fin;
-		String res = "";
-		int length;
+		// FileInputStream fin;
+		// String res = "";
+		// int length;
+		// try {
+		// File file = new File(fileName);
+		// fin = new FileInputStream(file);
+		// length = fin.available();
+		// byte[] buffer = new byte[length];
+		// fin.read(buffer);
+		// res = EncodingUtils.getString(buffer, "UTF-8");
+		// fin.close();
+		// } catch (IOException e) {
+		// e.printStackTrace();
+		// }
+		// return res;
+		StringBuilder total = new StringBuilder();
 		try {
-			File file = new File(fileName);
-			fin = new FileInputStream(file);
-			length = fin.available();
-			byte[] buffer = new byte[length];
-			fin.read(buffer);
-			res = EncodingUtils.getString(buffer, "UTF-8");
-			fin.close();
-		} catch (IOException e) {
+			FileInputStream inputStream = openFileInput(fileName);
+			BufferedReader r = new BufferedReader(new InputStreamReader(
+					inputStream));
+
+			String line;
+			while ((line = r.readLine()) != null) {
+				total.append(line);
+			}
+			r.close();
+			inputStream.close();
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		return res;
+		return total.toString();
 	}
 
 	private ArrayList<Phone> transList(String fileName) {
@@ -323,6 +343,14 @@ public class MainPhoneActivity extends Activity {
 		@Override
 		protected String doInBackground(String... f_url) {
 			int count;
+//			 try {
+//			        FileOutputStream outputStream = openFileOutput(filename, Context.MODE_PRIVATE);
+//			        outputStream.write(outputString.getBytes());
+//			        outputStream.close();
+//			    } catch (Exception e) {
+//			        e.printStackTrace();
+//			    }
+			 
 			try {
 				URL url = new URL(f_url[0]);
 				URLConnection conection = url.openConnection();
@@ -331,12 +359,14 @@ public class MainPhoneActivity extends Activity {
 				InputStream input = new BufferedInputStream(url.openStream(),
 						8192);
 
-				OutputStream output = new FileOutputStream(filePath);
+//				OutputStream output = new FileOutputStream(filePath);
+				 FileOutputStream output = openFileOutput(filePath, Context.MODE_PRIVATE);
 
 				byte data[] = new byte[1024];
 
 				while ((count = input.read(data)) != -1) {
-					output.write(data, 0, count);
+					output.write(data);
+//					output.write(data, 0, count);
 				}
 				output.flush();
 				output.close();
@@ -355,8 +385,7 @@ public class MainPhoneActivity extends Activity {
 			if (openFile(filePath).equals("password error!")) {
 				getPhoneNum("密码错误(您的学号)");
 			} else {
-				SharedPreferences.Editor editor = password
-						.edit();
+				SharedPreferences.Editor editor = password.edit();
 				editor.putString("psw", pw);
 				editor.commit();
 				nums = transList(filePath);
